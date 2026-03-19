@@ -1,0 +1,88 @@
+services:
+
+  tgbotapi:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram_bot_api
+    restart: unless-stopped
+    environment:
+      TELEGRAM_API_ID: "21985800"
+      TELEGRAM_API_HASH: "bdcda828225246c1ca090c5fde2f67da"
+      TELEGRAM_LOCAL: "1"
+    volumes:
+      - tgbotapi_data:/var/lib/telegram-bot-api
+    networks:
+      - auction_net
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: auction_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+      - auction_admin_bot/.env
+    volumes:
+      - db_data:/data
+      - videos:/videos
+      - tgbotapi_data:/var/lib/telegram-bot-api
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/auction.db
+      VIDEOS_DIR: /videos
+    depends_on:
+      - tgbotapi
+    networks:
+      - auction_net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        REACT_APP_API_URL: https://${DOMAIN}
+    container_name: auction_api
+    restart: unless-stopped
+    env_file:
+      - .env
+      - miniapp/backend/.env
+    volumes:
+      - db_data:/data
+      - videos:/videos
+      - frontend_build:/app/frontend/build
+      - tgbotapi_data:/var/lib/telegram-bot-api
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/auction.db
+      VIDEOS_DIR: /videos
+    expose:
+      - "8000"
+    depends_on:
+      - bot
+    networks:
+      - auction_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: auction_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - frontend_build:/usr/share/nginx/html:ro
+      - videos:/videos:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
+    networks:
+      - auction_net
+
+volumes:
+  db_data:
+  videos:
+  frontend_build:
+  tgbotapi_data:
+
+networks:
+  auction_net:
+    driver: bridge
