@@ -11,8 +11,9 @@ export function useTelegram() {
     if (webapp) {
       webapp.ready();
       webapp.expand();
-      webapp.setHeaderColor?.("#0c0c10");
-      webapp.setBackgroundColor?.("#0c0c10");
+      webapp.setHeaderColor?.("#ffffff");
+      webapp.setBackgroundColor?.("#f2f2f7");
+      webapp.setBottomBarColor?.("#ffffff");
       setTg(webapp);
       setUser(webapp.initDataUnsafe?.user || null);
     } else {

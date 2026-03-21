@@ -154,7 +154,7 @@ async def _finish_auction_job(
                 pass
 
         # Уведомление администраторам
-        for admin_id in ADMIN_IDS:
+        for admin_id in (await _get_all_admin_ids()):
             try:
                 await bot.send_message(
                     chat_id=admin_id,
@@ -168,7 +168,7 @@ async def _finish_auction_job(
         # Нет ставок — всё равно переводим в FINISHED (без победителя)
         # чтобы лот появился в разделе "Завершённые"
         await finish_lot(lot_id, winner_user_id=0, winner_username="", final_price=0)
-        for admin_id in ADMIN_IDS:
+        for admin_id in (await _get_all_admin_ids()):
             try:
                 await bot.send_message(
                     chat_id=admin_id,
@@ -247,7 +247,7 @@ async def _dutch_drop_tick(lot_id: int, interval_minutes: int, bot: Bot, winner_
                 pass
 
         # Уведомить администраторов
-        for admin_id in ADMIN_IDS:
+        for admin_id in (await _get_all_admin_ids()):
             try:
                 await bot.send_message(
                     chat_id=admin_id,
@@ -268,10 +268,7 @@ async def _dutch_drop_tick(lot_id: int, interval_minutes: int, bot: Bot, winner_
     logger.info(f"Dutch: lot {lot_id} price dropped {lot.current_price} → {new_price}")
 
     # Уведомить Mini App бэкенд о снижении цены
-    try:
-        await _notify_miniapp(lot_id, new_price, interval_secs)
-    except Exception as e:
-        logger.warning(f"MiniApp notify error: {e}")
+    await _notify_miniapp(lot_id, new_price, interval_minutes * 60)
 
     # Уведомить подписчиков о снижении
     notify = winner_bot or bot
@@ -339,6 +336,21 @@ def schedule_lot_start(lot_id: int, starts_at: datetime, bot: Bot, winner_bot: B
         replace_existing=True,
     )
     logger.info(f"Scheduled start for lot {lot_id} at {starts_at}")
+
+
+async def _get_all_admin_ids() -> list:
+    """Получить ID всех администраторов из БД + ADMIN_IDS из конфига."""
+    from config import ADMIN_IDS
+    try:
+        from db.queries import get_all_admins
+        admins = await get_all_admins()
+        db_ids = [a.user_id for a in admins]
+        # Объединяем с ADMIN_IDS из конфига
+        all_ids = list(set(list(ADMIN_IDS) + db_ids))
+        return all_ids
+    except Exception as e:
+        logger.warning(f"Failed to get admins from DB: {e}")
+        return list(ADMIN_IDS)
 
 
 async def _notify_miniapp(lot_id: int, current_price: int, interval_secs: int):
@@ -552,7 +564,7 @@ async def sync_overbid_notifications(bot: Bot, winner_bot: Bot = None):
                         bid_count = await get_bid_count(lot_id)
                         from db.queries import get_unique_bidder_count
                         user_count = await get_unique_bidder_count(lot_id)
-                        for admin_id in ADMIN_IDS:
+                        for admin_id in (await _get_all_admin_ids()):
                             try:
                                 await bot.send_message(
                                     chat_id=admin_id,

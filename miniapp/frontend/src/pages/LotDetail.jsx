@@ -14,14 +14,14 @@ function PropTags({ lot }) {
   const tags = [];
   if (lot.property_type) tags.push({ key: "type",    icon: "bed",       val: lot.property_type });
   if (lot.area_sqft)     tags.push({ key: "area",    icon: "grid_view", val: `${lot.area_sqft.toLocaleString("en-US")} sqft` });
-  if (lot.floor_level)   tags.push({ key: "floor",   icon: "apartment", val: `${lot.floor_level} floor` });
+  if (lot.floor_level)   tags.push({ key: "floor",   icon: "apartment", val: lot.floor_level });
   if (lot.view_type)     tags.push({ key: "view",    icon: "landscape", val: lot.view_type });
   if (lot.parking_spots != null) tags.push({ key: "park", icon: "directions_car", val: `${lot.parking_spots} мест` });
   if (lot.property_status) tags.push({ key: "status", icon: "key",      val: lot.property_status });
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "0 16px 12px" }}>
       {tags.map(t => (
-        <span key={t.key} className="prop-tag prop-tag-icon" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span key={t.key} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#ffffff", border: "1px solid #dde0ee", borderRadius: 6, padding: "3px 7px", fontSize: 11, color: "#1e2d4a" }}>
           <MI icon={t.icon} />{t.val}
         </span>
       ))}
@@ -121,25 +121,25 @@ export default function LotDetail({ lotId, onBack, visible, haptic }) {
       {/* Prop tags */}
       {lot && <div style={{ marginTop: 8 }}><PropTags lot={lot} /></div>}
 
-      {/* Body */}
-      <div className="detail-scroll" style={{ paddingTop: 0 }}>
+      {/* Body — flex, всё на одном экране */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
         {loading ? (
           <div className="loading-wrap"><div className="loading-spinner" /></div>
         ) : !lot ? (
           <div className="empty"><div className="empty-ico">❌</div><div className="empty-ttl">Лот не найден</div></div>
         ) : (
           <>
-            {/* Media — без таймера поверх */}
-            <div style={{ margin: "0 16px 14px", borderRadius: 12, overflow: "hidden" }}>
+            {/* Media */}
+            <div style={{ margin: "0 16px 8px", borderRadius: 12, overflow: "hidden", flex: "1 1 0", minHeight: 60, maxHeight: "45vh" }}>
               <MediaCarousel media={lot.media} emoji={lot.emoji} />
             </div>
 
-            <div className="d-body" style={{ paddingTop: 0 }}>
+            <div className="d-body" style={{ padding: "0 16px 4px", flexShrink: 0 }}>
               {/* Описание скрыто */}
               {/* {lot.description && <div className="d-desc">{lot.description}</div>} */}
 
-              {/* Цены: покупки + рыночная + текущая */}
-              <div className="stats3" style={{ marginBottom: 14 }}>
+              {/* Цены: покупки + рыночная */}
+              <div className="stats3" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 6 }}>
                 <div className="s3-box">
                   <div className="s3-val" style={{ fontSize: 11 }}>
                     {lot.purchase_price ? fmtAed(lot.purchase_price).replace("AED ", "") : "—"}
@@ -152,9 +152,13 @@ export default function LotDetail({ lotId, onBack, visible, haptic }) {
                   </div>
                   <div className="s3-lbl">Рыночная</div>
                 </div>
+              </div>
+
+              {/* Текущая цена — во всю строку */}
+              <div className="stats3" style={{ gridTemplateColumns: "1fr", marginBottom: 6 }}>
                 <div className="s3-box">
-                  <div className="s3-val s3-val-gold" style={{ fontSize: 11 }}>
-                    {fmtAed(lot.current_price).replace("AED ", "")}
+                  <div className="s3-val s3-val-gold" style={{ fontSize: 16 }}>
+                    {fmtAed(lot.current_price)}
                   </div>
                   <div className="s3-lbl">Сейчас</div>
                 </div>
@@ -173,7 +177,7 @@ export default function LotDetail({ lotId, onBack, visible, haptic }) {
 
               {/* Drop info */}
               {isActive && lot.price_drop_interval_minutes && (
-                <div className="drop-block">
+                <div className="drop-block" style={{ marginBottom: 6 }}>
                   <div className="drop-row">
                     <span className="drop-left">Шаг снижения</span>
                     <span className="drop-right drop-right-gold">{fmtAed(lot.bid_step)}</span>
@@ -194,7 +198,7 @@ export default function LotDetail({ lotId, onBack, visible, haptic }) {
               )}
 
               {isPaused && lot.price_drop_interval_minutes && (
-                <div className="drop-block">
+                <div className="drop-block" style={{ marginBottom: 6 }}>
                   <div className="drop-row">
                     <span className="drop-left">Шаг снижения</span>
                     <span className="drop-right drop-right-gold">{fmtAed(lot.bid_step)}</span>
@@ -208,7 +212,7 @@ export default function LotDetail({ lotId, onBack, visible, haptic }) {
               )}
 
               {isScheduled && (
-                <div className="drop-block">
+                <div className="drop-block" style={{ marginBottom: 6 }}>
                   <div className="drop-row">
                     <span className="drop-left">Старт аукциона</span>
                     <span className="drop-right drop-right-gold">
@@ -245,8 +249,8 @@ export default function LotDetail({ lotId, onBack, visible, haptic }) {
         <div className="bid-cta-wrap">
           {isActive ? (
             <button className="bid-cta" onClick={() => { try { haptic?.("light"); } catch {} setSheet(true); }}>
-              <span style={{ display: "block", fontSize: 13, fontWeight: 600, opacity: 0.85 }}>Купить по текущей цене</span>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 800 }}>{fmtAed(lot.current_price)}</span>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 400, color: "rgba(255,255,255,0.6)" }}>Купить по текущей цене</span>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#fafafc" }}>{fmtAed(lot.current_price)}</span>
             </button>
           ) : isPaused ? (
             <div className="lot-closed">⏸ Аукцион приостановлен</div>

@@ -89,7 +89,7 @@ def kb_floor() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="➡️ Mid floor",  callback_data="lot_floor:Mid floor"),
         InlineKeyboardButton(text="⬇️ Low floor",  callback_data="lot_floor:Low floor"),
     )
-    b.row(InlineKeyboardButton(text="← Назад", callback_data="lot:back:type"))
+    b.row(InlineKeyboardButton(text="← Назад", callback_data="lot:back:area"))
     b.row(*_cancel_row())
     return b.as_markup()
 
@@ -97,13 +97,13 @@ def kb_floor() -> InlineKeyboardMarkup:
 def kb_view() -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="🌊 Sea",   callback_data="lot_view:Sea view"),
-        InlineKeyboardButton(text="🏙 City",  callback_data="lot_view:City view"),
-        InlineKeyboardButton(text="🏗 Facilities", callback_data="lot_view:Facilities view"),
+        InlineKeyboardButton(text="🌊 Sea view",   callback_data="lot_view:Sea view"),
+        InlineKeyboardButton(text="🏙 City view",  callback_data="lot_view:City view"),
+        InlineKeyboardButton(text="🏗 Facilities view", callback_data="lot_view:Facilities view"),
     )
     b.row(
         InlineKeyboardButton(text="🚫 No view",      callback_data="lot_view:No view"),
-        InlineKeyboardButton(text="🌆 Burj Khalifa", callback_data="lot_view:Burj Khalifa view"),
+        InlineKeyboardButton(text="🌆 Burj Khalifa view", callback_data="lot_view:Burj Khalifa view"),
     )
     b.row(InlineKeyboardButton(text="← Назад", callback_data="lot:back:floor"))
     b.row(*_cancel_row())
@@ -139,7 +139,7 @@ def kb_price_step() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="50 000 AED", callback_data="lot_step:50000"),
     )
     b.row(InlineKeyboardButton(text="✏️ Свой шаг", callback_data="lot_step:custom"))
-    b.row(InlineKeyboardButton(text="← Назад", callback_data="lot:back:status"))
+    b.row(InlineKeyboardButton(text="← Назад", callback_data="lot:back:start_price"))
     b.row(*_cancel_row())
     return b.as_markup()
 
@@ -308,6 +308,21 @@ async def cb_back_type(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(
         f"<b>Шаг 4/17 — Тип недвижимости</b>\n\nТекущее: <b>{cur or '—'}</b>\n\nВыберите тип:",
         reply_markup=kb_property_type(), parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "lot:back:area")
+async def cb_back_area(callback: CallbackQuery, state: FSMContext):
+    """Назад к шагу 5 — площадь."""
+    if not await admin_only_callback(callback):
+        return
+    data = await state.get_data()
+    cur = data.get("area_sqft")
+    await state.set_state(CreateLotFSM.entering_area)
+    await callback.message.answer(
+        f"<b>Шаг 5/17 — Площадь</b>\n\nТекущее: <b>{cur if cur else '—'} sqft</b>\n\nВведите площадь объекта:\n<i>Диапазон: {MIN_AREA:,} – {MAX_AREA:,} sqft</i>",
+        reply_markup=kb_back_cancel("lot:back:type"), parse_mode="HTML",
     )
     await callback.answer()
 
@@ -726,7 +741,7 @@ async def cb_floor(callback: CallbackQuery, state: FSMContext):
     await state.update_data(floor_level=floor)
     await state.set_state(CreateLotFSM.choosing_view)
     await callback.message.answer(
-        f"✅ Этаж: <b>{floor} floor</b>\n\n─────────────────\n\n<b>Шаг 7/17 — Вид</b>\n\nВыберите вид:",
+        f"✅ Этаж: <b>{floor}</b>\n\n─────────────────\n\n<b>Шаг 7/17 — Вид</b>\n\nВыберите вид:",
         reply_markup=kb_view(), parse_mode="HTML",
     )
     await callback.answer()
